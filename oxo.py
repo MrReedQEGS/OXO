@@ -193,6 +193,8 @@ def HandleInput(running):
                     newPiece = Piece(imageForThisNewPiece,surface,turn,False)
                     theGameGrid.SetGridItem(currentSquare,newPiece)
 
+                    pygame.mixer.Sound.play(clickSound)
+
             
             if(DEBUG_ON):
                 theGameGrid.DebugPrintSelf()
