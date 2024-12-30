@@ -25,7 +25,7 @@ from tkinter import messagebox
 # VARIABLES
 ##############################################################################
 
-APP_NAME = "Grid game temmplate"
+APP_NAME = "OXO game"
 COPYRIGHT_MESSAGE = "Mark Reed (c) 2024"
 WINDOW_TEXT = APP_NAME + " - " + COPYRIGHT_MESSAGE
 
@@ -34,23 +34,23 @@ EMPTY_SQUARE = 0
 PLAYER1 = 1
 PLAYER2 = 2
 
-GAMECOLS = 12
-GAMEROWS = 8
+GAMECOLS = 3
+GAMEROWS = 3
 
-GRID_SIZE_X = 52
-GRID_SIZE_Y = 52
+GRID_SIZE_X = 130
+GRID_SIZE_Y = 135
 TOP_LEFT = (26,28)
-PIECE_OFFSET_X = 4
-PIECE_OFFSET_Y = 6
+PIECE_OFFSET_X = 15
+PIECE_OFFSET_Y = 22
 
 RIGHT_MOUSE_BUTTON = 3
 
 DEBUG_ON = False
 
-SCREEN_WIDTH = 678
+SCREEN_WIDTH = 440
 SCREEN_HEIGHT = 504
 
-BUTTON_X_VALUE = 526
+BUTTON_X_VALUE = 289
 BUTTON_Y_VALUE  = 472
 BUTTON_WIDTH = 30
 
@@ -85,7 +85,7 @@ restartImageGreyName = "./images/RestartGrey.jpg"
 player1PieceImageName = "./images/player1Piece.png"
 player2PieceImageName = "./images/player2Piece.png"
 
-PIECE_SIZE = 20
+PIECE_SIZE = 90
 
 #sounds
 pygame.mixer.init()
@@ -103,7 +103,7 @@ my_font = pygame.font.SysFont('Comic Sans MS', 16)
 
 running = True
 
-turn = COL_BLACK
+turn = PLAYER1
 
 #Timer callbacks
 def OneSecondCallback():
@@ -141,12 +141,12 @@ def LoadImages():
     #Load an image with a white background and set the white to transparent.
     #Will only work if the background is all properly white 255,255,255
     player1PieceImage = pygame.image.load(player1PieceImageName)
-    player1PieceImage = pygame.transform.scale(player1PieceImage, (43, 43))  #change size first before doing alpha things
+    player1PieceImage = pygame.transform.scale(player1PieceImage, (PIECE_SIZE, PIECE_SIZE))  #change size first before doing alpha things
     player1PieceImage.set_colorkey((255,255,255))
     player1PieceImage.convert_alpha()
 
     player2PieceImage = pygame.image.load(player2PieceImageName)
-    player2PieceImage = pygame.transform.scale(player2PieceImage, (43, 43))  #change size first before doing alpha things
+    player2PieceImage = pygame.transform.scale(player2PieceImage, (PIECE_SIZE, PIECE_SIZE))  #change size first before doing alpha things
     player2PieceImage.set_colorkey((255,255,255))
     player2PieceImage.convert_alpha()
     
@@ -163,6 +163,8 @@ def LoadImages():
 
 def HandleInput(running):
 
+    global turn
+
     for event in pygame.event.get():
 
         if event.type == pygame.QUIT:
@@ -172,46 +174,32 @@ def HandleInput(running):
             currentMousePos = pygame.mouse.get_pos()
             currentSquare = theGameGrid.WhatSquareAreWeIn(currentMousePos)
             thingAtThatPosition = theGameGrid.GetGridItem(currentSquare)
-
-            #print("Square clicked in : ", currentSquare)
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == RIGHT_MOUSE_BUTTON:
                 print ("You clicked the right mouse button")
 
             else:
                 #did we click on a piece...if so we need to drag it around!
-                if(thingAtThatPosition != None):
-                    #player is picking up a piece - the clicked square is not empty!
-                    thingAtThatPosition.SetDragged(True)
-                    thingAtThatPosition.SetPickedUpFromLocation(currentSquare)
-                    theGameGrid.SetDraggedPiece(thingAtThatPosition)
-                    theGameGrid.SetGridItem(currentSquare,None)
+                if(thingAtThatPosition == None and theGameGrid.OutsideGrid(currentSquare) == False):
+                    #player has clicked an empty space.  Put down a new piece.
+
+                    imageForThisNewPiece = player2PieceImage
+                    if turn == PLAYER1:
+                        imageForThisNewPiece = player1PieceImage
+                        turn = PLAYER2
+                    else:
+                        turn = PLAYER1
+
+                    newPiece = Piece(imageForThisNewPiece,surface,turn,False)
+                    theGameGrid.SetGridItem(currentSquare,newPiece)
+
             
             if(DEBUG_ON):
                 theGameGrid.DebugPrintSelf()
 
         elif event.type == pygame.MOUSEBUTTONUP:
-            #print("Mouse up")
-            currentMousePos = pygame.mouse.get_pos()
-            currentSquare = theGameGrid.WhatSquareAreWeIn(currentMousePos)
-            thingAtThatPosition = theGameGrid.GetGridItem(currentSquare)
-
-            someDraggedPiece = theGameGrid.GetDraggedPiece()
-            if(someDraggedPiece != None):
-                #we are dragging, so put it down...if the Square is empty
-                theGameGrid.SetDraggedPiece(None)
-
-                if(thingAtThatPosition == None and theGameGrid.OutsideGrid(currentSquare) == False):
-                    theGameGrid.SetGridItem(currentSquare,someDraggedPiece)
-                else:
-                    #the piece cannot go here...put it back to the place it came from
-                    whereItCameFrom = someDraggedPiece.GetPickedUpFromLocation()
-                    theGameGrid.SetGridItem(whereItCameFrom,someDraggedPiece)
-
-                someDraggedPiece.SetDragged(False)
-
-            if(DEBUG_ON):
-                theGameGrid.DebugPrintSelf()
+           #print("Mouse up")
+           pass
            
     return running
 
@@ -246,24 +234,9 @@ def InfoButtonCallback():
    print("Info pressed")
 
 def PutPiecesInStartingPositions():
-
+    global turn
     theGameGrid.BlankTheGrid()
-
-    for i in range(8):
-        someGamePiece = Piece(player1PieceImage,surface,PLAYER1,False)
-        theGameGrid.SetGridItem((9,i),someGamePiece)
-        
-    for i in range(4):
-        someGamePiece = Piece(player1PieceImage,surface,PLAYER1,False)
-        theGameGrid.SetGridItem((10,i),someGamePiece)
-        
-    for i in range(4):
-        someGamePiece = Piece(player2PieceImage,surface,PLAYER2,False)
-        theGameGrid.SetGridItem((10,4+i),someGamePiece)
-        
-    for i in range(8):
-        someGamePiece = Piece(player2PieceImage,surface,PLAYER2,False)
-        theGameGrid.SetGridItem((11,i),someGamePiece)
+    turn = PLAYER1 
         
 ##############################################################################
 # MAIN
